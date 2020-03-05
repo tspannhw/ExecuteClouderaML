@@ -16,12 +16,21 @@
  */
 package dev.datainmotion.processors.ExecuteClouderaML;
 
+import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.List;
+import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+/**
+ *
+ */
 public class ExecuteClouderaMLTest {
 
     private TestRunner testRunner;
@@ -33,6 +42,40 @@ public class ExecuteClouderaMLTest {
 
     @Test
     public void testProcessor() {
+    	testRunner.setProperty("url", "https://modelservice.cloudera.site/model");
+    	testRunner.setProperty("accessKey", "dsfkaskfjasidjfs9df9sdjfaskdjfsfsd");
+    	testRunner.setProperty("cmlrequest", "{\"sentence\":\"cloudera rocks\"}");
+        // testRunner.enqueue();
+
+        // Must add valid url for integration test
+        // runAndAssertHappy();
+    }
+
+    /**
+     *
+     */
+    private void runAndAssertHappy() {
+        testRunner.setValidateExpressionUsage(false);
+        testRunner.run();
+        testRunner.assertValid();
+        testRunner.assertAllFlowFilesTransferred(ExecuteClouderaML.REL_SUCCESS);
+        List<MockFlowFile> successFiles = testRunner.getFlowFilesForRelationship(ExecuteClouderaML.REL_SUCCESS);
+
+        if ( successFiles == null || successFiles.size() <=0) {
+            System.out.println("fail");
+        }
+        for (MockFlowFile mockFile : successFiles) {
+            Map<String, String> attributes =  mockFile.getAttributes();
+
+            for (String attribute : attributes.keySet()) {
+                System.out.println("Attribute:" + attribute + " = " + mockFile.getAttribute(attribute));
+            }
+
+            assertNotNull(mockFile.getAttribute(ExecuteClouderaML.ATTRIBUTE_OUTPUT_HEADER));
+            assertNotNull(mockFile.getAttribute(ExecuteClouderaML.ATTRIBUTE_OUTPUT_STATUS_CODE));
+            assertNotNull(mockFile.getAttribute(ExecuteClouderaML.ATTRIBUTE_OUTPUT_STATUS));
+            assertNotNull(mockFile.getAttribute(ExecuteClouderaML.ATTRIBUTE_OUTPUT_NAME));
+        }
 
     }
 

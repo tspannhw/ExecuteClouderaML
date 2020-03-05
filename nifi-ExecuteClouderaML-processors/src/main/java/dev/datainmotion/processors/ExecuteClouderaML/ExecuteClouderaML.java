@@ -48,36 +48,21 @@ import java.util.*;
 public class ExecuteClouderaML extends AbstractProcessor {
 
     /** output attribute name post.results will contain JSON **/
-    public static final String ATTRIBUTE_OUTPUT_NAME = "post.results";
+    public static final String ATTRIBUTE_OUTPUT_NAME = "cml.results";
 
     /** output attribute name post.header will contain JSON **/
-    public static final String ATTRIBUTE_OUTPUT_HEADER = "post.header";
+    public static final String ATTRIBUTE_OUTPUT_HEADER = "cml.header";
 
     /** output attribute name post.status will contain JSON **/
-    public static final String ATTRIBUTE_OUTPUT_STATUS = "post.status";
+    public static final String ATTRIBUTE_OUTPUT_STATUS = "cml.status";
 
     /** output attribute name post.statuscode will contain JSON **/
-    public static final String ATTRIBUTE_OUTPUT_STATUS_CODE = "post.statuscode";
+    public static final String ATTRIBUTE_OUTPUT_STATUS_CODE = "cml.statuscode";
 
-    /** url http://127.0.0.1:9999/squeezenet/predict  */
+    /** url   https://modelservice.cloudera.site/model */
     public static final PropertyDescriptor URL_NAME = new PropertyDescriptor.Builder().name("url")
-            .description("URL Name like http://127.0.0.1:9999/squeezenet/predict").required(true)
+            .description("URL Name like https://modelservice.cloudera.site/model ").required(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).expressionLanguageSupported( ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).build();
-
-    /** fieldname "data" */
-    public static final PropertyDescriptor FIELD_NAME = new PropertyDescriptor.Builder().name("fieldname")
-            .description("Field Name like data").required(true)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).build();
-
-    /** imagename imageName  "/TimKafka.jpg" */
-    public static final PropertyDescriptor IMAGE_NAME = new PropertyDescriptor.Builder().name("imagename")
-            .description("Image Name like TimLovesNiFi.jpg").required(true)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).build();
-
-    /** imageType "image/jpeg" */
-    public static final PropertyDescriptor IMAGE_TYPE = new PropertyDescriptor.Builder().name("imagetype")
-            .description("Image Type like image/jpeg").required(true)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).build();
 
     /** header name */
     public static final PropertyDescriptor HEADER_NAME = new PropertyDescriptor.Builder().name("headername")
@@ -102,6 +87,20 @@ public class ExecuteClouderaML extends AbstractProcessor {
             .description("basic http password like iscool").required(false)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).build();
+    public static final String ACCESS_KEY = "accessKey";
+    /** CML access key */
+    public static final PropertyDescriptor CML_ACCESSKEY = new PropertyDescriptor.Builder().name( ACCESS_KEY )
+            .description("cml model access key").required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).build();
+
+    public static final String CMLREQUEST = "cmlrequest";
+
+    /** request json string */
+    public static final PropertyDescriptor CML_REQUEST = new PropertyDescriptor.Builder().name( CMLREQUEST )
+            .description("{\"sentence\":\"cloudera rocks\"}").required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).build();
 
     /** Success of Relationship */
     public static final Relationship REL_SUCCESS = new Relationship.Builder().name("success")
@@ -119,9 +118,8 @@ public class ExecuteClouderaML extends AbstractProcessor {
     protected void init(final ProcessorInitializationContext context) {
         final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
         descriptors.add(URL_NAME);
-        descriptors.add(FIELD_NAME);
-        descriptors.add(IMAGE_NAME);
-        descriptors.add(IMAGE_TYPE);
+        descriptors.add(CML_REQUEST);
+        descriptors.add(CML_ACCESSKEY);
         descriptors.add(HEADER_NAME);
         descriptors.add(HEADER_VALUE);
         descriptors.add(BASIC_USERNAME);
@@ -160,128 +158,76 @@ public class ExecuteClouderaML extends AbstractProcessor {
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
         FlowFile flowFile = session.get();
         if ( flowFile == null ) {
-            return;
+            flowFile = session.create();
         }
         try {
             flowFile.getAttributes();
 
-            /** test
-             *
-             * curl -H "Content-Type: application/json" -X POST https://modelservice.ml-1c323959-8ec.cdp-cldr.ylcu-atmi.cloudera.site/model -d
-             * '{"accessKey":"mziy46a87ob7ix6aflv9lteopxbk9mlt",
-             * "request":{"sentence":"Cloudera is the best ever"}}'
-             *
-             */
             String urlName = flowFile.getAttribute("url");
             if (urlName == null) {
                 urlName = context.getProperty("url").evaluateAttributeExpressions(flowFile).getValue();
             }
             if (urlName == null) {
-                urlName = "http://localhost:8080/nifi";
+                urlName = "https://cloudera.site/model";
             }
 
-            String fieldname = flowFile.getAttribute("fieldname");
-            if (fieldname == null) {
-                fieldname = context.getProperty("fieldname").evaluateAttributeExpressions(flowFile).getValue();
-            }
-            if (fieldname == null) {
-                fieldname = "data";
+            String accessKey = context.getProperty(ACCESS_KEY).evaluateAttributeExpressions(flowFile).getValue();
+            if (accessKey == null) {
+                accessKey = flowFile.getAttribute(ACCESS_KEY);
             }
 
-            String imagename = flowFile.getAttribute("imagename");
-            if (imagename == null) {
-                imagename = context.getProperty("imagename").evaluateAttributeExpressions(flowFile).getValue();
+            String cmlRequest =context.getProperty(CMLREQUEST).evaluateAttributeExpressions(flowFile).getValue();
+            if (cmlRequest == null) {
+                cmlRequest = flowFile.getAttribute(CMLREQUEST);
             }
-            if (imagename == null) {
-                imagename = "test.jpg";
-            }
-
-            String imagetype = flowFile.getAttribute("imagetype");
-            if (imagetype == null) {
-                imagetype = context.getProperty("imagetype").evaluateAttributeExpressions(flowFile).getValue();
-            }
-            if (imagetype == null) {
-                imagetype = "images/jpeg";
+            if (cmlRequest == null) {
+                cmlRequest = "{}";
             }
 
-            String headername = flowFile.getAttribute("headername");
-            if (headername == null) {
-                headername = context.getProperty("headername").evaluateAttributeExpressions(flowFile).getValue();
-            }
-
-            String headervalue = flowFile.getAttribute("headervalue");
-            if (headervalue == null) {
-                headervalue = context.getProperty("headervalue").evaluateAttributeExpressions(flowFile).getValue();
-            }
-
-            String basicusername = flowFile.getAttribute("basicusername");
-            if (basicusername == null) {
-                basicusername = context.getProperty("basicusername").evaluateAttributeExpressions(flowFile).getValue();
-            }
-
-            String basicpassword = flowFile.getAttribute("basicpassword");
-            if (basicpassword == null) {
-                basicpassword = context.getProperty("basicpassword").evaluateAttributeExpressions(flowFile).getValue();
-            }
-
-            final String url = urlName;
-            final String field = fieldname;
-            final String image = imagename;
-            final String imgtype = imagetype;
-            final String headerName = headername;
-            final String headerValue = headervalue;
-            final String basicUserName = basicusername;
-            final String basicPassword = basicpassword;
+            Map<String, String> attributes = flowFile.getAttributes();
+            Map<String, String> attributesClean = new HashMap<>();
 
             try {
-                final HashMap<String, String> attributes = new HashMap<String, String>();
+                HTTPPostResults results = HTTPPostUtility.postToCML( urlName, accessKey, cmlRequest );
 
-                session.read(flowFile, new InputStreamCallback() {
-                    @Override
-                    public void process(InputStream input) throws IOException {
-                        if ( input == null ) {
-                            return;
-                        }
-                        HTTPPostResults results = null;
-//HTTPPostUtility.postImage(url, field, image, imgtype, input, headerName, headerValue, basicUserName, basicPassword);
-
-                        if (results != null && results.getJsonResultBody() != null) {
-                            try {
-                                attributes.put(ATTRIBUTE_OUTPUT_NAME, results.getJsonResultBody());
-                                attributes.put(ATTRIBUTE_OUTPUT_HEADER, results.getHeader());
-                                attributes.put(ATTRIBUTE_OUTPUT_STATUS, results.getStatus());
-                                attributes.put(ATTRIBUTE_OUTPUT_STATUS_CODE, String.valueOf(results.getStatusCode()));
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        else {
-                            try {
-                                attributes.put(ATTRIBUTE_OUTPUT_NAME, "Fail");
-                                attributes.put(ATTRIBUTE_OUTPUT_HEADER, "Fail");
-                                attributes.put(ATTRIBUTE_OUTPUT_STATUS, "FAIL");
-                                attributes.put(ATTRIBUTE_OUTPUT_STATUS_CODE, "500");
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
+                if (results != null && results.getJsonResultBody() != null) {
+                    try {
+                        attributesClean.put(ATTRIBUTE_OUTPUT_NAME, results.getJsonResultBody());
+                        attributesClean.put(ATTRIBUTE_OUTPUT_HEADER, results.getHeader());
+                        attributesClean.put(ATTRIBUTE_OUTPUT_STATUS, results.getStatus());
+                        attributesClean.put(ATTRIBUTE_OUTPUT_STATUS_CODE, String.valueOf(results.getStatusCode()));
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                });
-                if (attributes.size() == 0) {
-                    session.transfer(flowFile, REL_FAILURE);
-                } else {
-                    flowFile = session.putAllAttributes(flowFile, attributes);
-                    session.transfer(flowFile, REL_SUCCESS);
                 }
-            } catch (Exception e) {
-                throw new ProcessException(e);
+                else {
+                    try {
+                        attributesClean.put(ATTRIBUTE_OUTPUT_NAME, "Fail");
+                        attributesClean.put(ATTRIBUTE_OUTPUT_HEADER, "Fail");
+                        attributesClean.put(ATTRIBUTE_OUTPUT_STATUS, "FAIL");
+                        attributesClean.put(ATTRIBUTE_OUTPUT_STATUS_CODE, "500");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            } catch (final Throwable t) {
+                getLogger().error("Unable to process CML call " + t.getLocalizedMessage());
+                getLogger().error("{} failed to process due to {}; rolling back session", new Object[] { this, t });
+                throw t;
             }
 
+        if (attributes.size() == 0) {
+            session.transfer(flowFile, REL_FAILURE);
+        } else {
+            flowFile = session.putAllAttributes(flowFile, attributesClean);
+            session.transfer(flowFile, REL_SUCCESS);
+        }
             session.commit();
         } catch (
 
                 final Throwable t) {
-            getLogger().error("Unable to process Post Image Processor file " + t.getLocalizedMessage());
+            getLogger().error("Unable to process Cloudera machine learning " + t.getLocalizedMessage());
             throw new ProcessException(t);
         }
     }
