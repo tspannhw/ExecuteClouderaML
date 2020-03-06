@@ -1,5 +1,7 @@
 package dev.datainmotion.processors.ExecuteClouderaML;
 
+import com.google.gson.Gson;
+
 import java.io.Serializable;
 import java.util.StringJoiner;
 
@@ -36,10 +38,20 @@ public class CMLPost implements Serializable
         this.request = request;
     }
 
-    // CML format hack
+     // CML format hack
     public String getAsJSON() {
-        return "{\"accessKey\":\"" + accessKey +
-                "\", \"request\": " + request + "}";
+        Gson gson = new Gson();
+
+        CMLCall call = new CMLCall();
+        call.setAccessKey( this.accessKey );
+        Request request = new Request();
+        request.setSentence( this.request );
+        call.setRequest( request );
+
+        System.out.println(gson.toJson( call ));
+        return gson.toJson(call);
+//        return "{\"accessKey\":\"" + accessKey +
+//                "\", \"request\": " + request + "}";
     }
 
     @Override

@@ -189,12 +189,8 @@ public class ExecuteClouderaML extends AbstractProcessor {
 
             try {
 
-                System.out.println("url = " + urlName + " acces=" + accessKey + " cm=" + cmlRequest);
-
                 HTTPPostResults results = HTTPPostUtility.postToCML( urlName, accessKey, cmlRequest );
 
-                System.out.println("result=" + results.getHeader());
-                
                 if (results != null && results.getJsonResultBody() != null) {
                     try {
                         attributesClean.put(ATTRIBUTE_OUTPUT_NAME, results.getJsonResultBody());
@@ -217,6 +213,7 @@ public class ExecuteClouderaML extends AbstractProcessor {
                 }
 
             } catch (final Throwable t) {
+                t.printStackTrace();
                 getLogger().error("Unable to process CML call " + t.getLocalizedMessage());
                 getLogger().error("{} failed to process due to {}; rolling back session", new Object[] { this, t });
                 throw t;
@@ -230,8 +227,8 @@ public class ExecuteClouderaML extends AbstractProcessor {
         }
             session.commit();
         } catch (
-
                 final Throwable t) {
+            t.printStackTrace();
             getLogger().error("Unable to process Cloudera machine learning " + t.getLocalizedMessage());
             throw new ProcessException(t);
         }

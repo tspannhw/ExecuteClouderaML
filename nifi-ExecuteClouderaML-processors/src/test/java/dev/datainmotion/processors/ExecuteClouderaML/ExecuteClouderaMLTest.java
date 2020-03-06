@@ -42,13 +42,13 @@ public class ExecuteClouderaMLTest {
 
     @Test
     public void testProcessor() {
-    	testRunner.setProperty("url", "https://modelservice.cloudera.site/model");
-    	testRunner.setProperty("accessKey", "dsfkaskfjasidjfs9df9sdjfaskdjfsfsd");
-    	testRunner.setProperty("cmlrequest", "{\"sentence\":\"cloudera rocks\"}");
+    	testRunner.setProperty("url", "https://modelservice.X.cloudera.site/model");
+    	testRunner.setProperty("accessKey", "X");
+    	testRunner.setProperty("cmlrequest", "cloudera rocks");
         // testRunner.enqueue();
 
         // Must add valid url for integration test
-        // runAndAssertHappy();
+       // runAndAssertHappy();
     }
 
     /**
