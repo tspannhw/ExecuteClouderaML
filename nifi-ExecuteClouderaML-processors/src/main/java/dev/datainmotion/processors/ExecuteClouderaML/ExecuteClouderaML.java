@@ -188,8 +188,13 @@ public class ExecuteClouderaML extends AbstractProcessor {
             Map<String, String> attributesClean = new HashMap<>();
 
             try {
+
+                System.out.println("url = " + urlName + " acces=" + accessKey + " cm=" + cmlRequest);
+
                 HTTPPostResults results = HTTPPostUtility.postToCML( urlName, accessKey, cmlRequest );
 
+                System.out.println("result=" + results.getHeader());
+                
                 if (results != null && results.getJsonResultBody() != null) {
                     try {
                         attributesClean.put(ATTRIBUTE_OUTPUT_NAME, results.getJsonResultBody());
