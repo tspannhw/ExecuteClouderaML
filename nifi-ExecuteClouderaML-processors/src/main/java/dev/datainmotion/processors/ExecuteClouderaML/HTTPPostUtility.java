@@ -29,6 +29,7 @@ public class HTTPPostUtility {
 
 		HTTPPostResults results = new HTTPPostResults();
 
+		Unirest.config().reset();
         Unirest.config()
                 .socketTimeout( 90000 )
                 .connectTimeout( 180000 )
