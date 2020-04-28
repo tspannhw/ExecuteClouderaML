@@ -28,42 +28,57 @@ public class HTTPPostUtility {
 		}
 
 		HTTPPostResults results = new HTTPPostResults();
+		UnirestInstance unirest = Unirest.spawnInstance();
 
-		Unirest.config().reset();
-        Unirest.config()
-                .socketTimeout( 90000 )
-                .connectTimeout( 180000 )
-                .concurrency( 10, 5 )
-                .setDefaultHeader( "Accept", "application/json" )
-                .followRedirects( true )
-				.verifySsl(false)
-                .enableCookieManagement( true );
-
-		CMLPost cmlPost = new CMLPost();
-		cmlPost.setAccessKey( accessKey );
-		cmlPost.setRequest( request );
-
-		HttpResponse<JsonNode> resp = Unirest.post( urlName )
-                .header( "accept", "application/json" )
-				.header("Content-Type", "application/json")
-				.body(cmlPost.getAsJSON())
-                .asJson();
-
-		if (resp.getBody() != null ) {
-			results.setJsonResultBody(resp.getBody().toPrettyString());
+		if ( unirest == null) {
+			unirest = Unirest.primaryInstance();
+		}
+		if (unirest == null)
+		{
+			return results;
 		}
 
-		if ( resp.getHeaders() != null) {
-			results.setHeader( resp.getHeaders().toString() );
-		}
-		if ( resp.getStatusText() != null ) {
-			results.setStatus(resp.getStatusText());
+		try {
+			unirest.config()
+					.socketTimeout( 90000 )
+					.connectTimeout( 180000 )
+					.concurrency( 2, 2 )
+					.setDefaultHeader( "Accept", "application/json" )
+					.followRedirects( true )
+					.verifySsl(false)
+					.enableCookieManagement( true );
+
+//			CMLPost cmlPost = new CMLPost();
+//			cmlPost.setAccessKey( accessKey );
+//			cmlPost.setRequest( request );
+
+			//				.body(cmlPost.getAsJSON())
+			HttpResponse<JsonNode> resp = unirest.post( urlName )
+					.header( "accept", "application/json" )
+					.header("Content-Type", "application/json")
+					.body("{\"accessKey\":\"" + accessKey + "\",\"request\":{" + request + "}}")
+					.asJson();
+
+			if (resp.getBody() != null ) {
+				results.setJsonResultBody(resp.getBody().toPrettyString());
+			}
+
+			if ( resp.getHeaders() != null) {
+				results.setHeader( resp.getHeaders().toString() );
+			}
+			if ( resp.getStatusText() != null ) {
+				results.setStatus(resp.getStatusText());
+			}
+
+			results.setStatusCode(resp.getStatus());
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 
-		results.setStatusCode(resp.getStatus());
-
-        try {
-            Unirest.shutDown();
+		try {
+			unirest.close();
+			unirest.shutDown();
+			unirest = null;
         } catch (Exception e) {
             e.printStackTrace();
         }
